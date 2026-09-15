@@ -1,0 +1,6 @@
+interface:
+  display_name: "Evolve Codebase Structure"
+  short_description: "Survey and shape physical codebase structure"
+  default_prompt: "Use $evolve-codebase-structure to audit this repository's physical organization and help me choose one candidate to shape."
+policy:
+  allow_implicit_invocation: false
