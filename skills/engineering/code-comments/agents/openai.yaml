@@ -1,0 +1,6 @@
+interface:
+  display_name: "Code Comments"
+  short_description: "Document contracts and readable systems code"
+  default_prompt: "Use $code-comments to improve the comments, documentation contracts, and visual structure of this systems code."
+policy:
+  allow_implicit_invocation: false

@@ -1,282 +1,90 @@
 ---
 name: code-comments
-description: >
-  Enforce documentation and visual structure standards for systems-level
-  and LLM-inference codebases (Python, C++, CUDA). Apply this skill
-  whenever writing, editing, refactoring, or reviewing any .py, .cpp,
-  or .cu file — including small edits. Consult before producing any code.
+description: Improve contracts, rationale, and conditional visual structure in human-maintained Python, C++, and CUDA systems code.
+disable-model-invocation: true
 license: MIT
 ---
 
-# Code Commenting Guidelines
+# Code Comments
 
-Two things are enforced equally: **semantic annotation** and **visual breathing room**.
-The goal is always to explain *why*, not *what* — the code already says what it does.
+Improve code-adjacent documentation and scanability in human-maintained Python, C++, and CUDA systems code. Add information a caller or maintainer cannot reliably derive from names, types, and control flow; preserve useful visual structure without imposing one personal layout on every repository.
 
----
+This skill is explicitly invoked. It does not choose the implementation, redesign modules, or automatically invoke another skill.
 
-## 1. Semantic Tokens (highest priority)
+Settled behavior, public interfaces, and implementation choices take precedence. When this skill is invoked alone, surface any naming, type, control-flow, interface, or module-boundary change needed for clarity instead of making that implementation change under a comment-only scope. When an implementation skill is also explicitly active, let it own the code change, then document only the residual knowledge the code still cannot express.
 
-This is the most important rule. Replace all informal markers with standardized tokens.
-These tokens are the primary mechanism for communicating intent that cannot be inferred
-from the code itself.
+## Establish local authority
 
-| Token      | When to use                                                          |
-|------------|----------------------------------------------------------------------|
-| `WARNING:` | Thread races, memory corruption, mandatory ordering constraints.     |
-| `PERF:`    | Warp divergence, cache pressure, vectorization opportunities.        |
-| `NOTE:`    | Non-obvious design rationale, mathematical invariants, API quirks.   |
-| `TODO:`    | Known gaps or deferred work.                                         |
-| `FIXME:`   | Known bugs pending a fix.                                            |
+Before editing, inspect the repository's formatter, lint rules, docstring or documentation format, comment tokens, nearby public APIs, and representative files. Repository rules take precedence, followed by the language formatter and official language conventions. Use the defaults below only where the project is silent.
 
-**Never use:** `!!!`, `***`, `IMPORTANT`, `CRITICAL`, `HACK`, or any emoji.
+The inspection is complete when the applicable local format and any public-contract convention are known, or their absence is explicit.
 
-```python
-# WRONG
-# !!! sync threads before reduction !!!
-__syncthreads()
+## Make the code carry what it can
 
-# CORRECT
-# WARNING: barrier is mandatory before the warp-reduction phase;
-#          removing it causes non-deterministic partial sums.
-__syncthreads()
-```
+Assess first whether a precise name, type, control-flow shape, assertion, or narrow interface could express the fact directly, subject to the scope boundary above. A comment should preserve information that would otherwise require reconstruction: purpose, rationale, invariants, units, state transitions, ordering, side effects, ownership, failure behavior, or a non-obvious algorithm.
 
-```python
-# WRONG
-# NOTE: this is important
-block_size = 256
+Comments may explain **how** when a complex algorithm cannot be made self-evident without losing locality. Keep the explanation next to the code whose maintenance depends on it.
 
-# CORRECT — only write NOTE when the rationale is genuinely non-obvious
-# NOTE: 256 threads saturates a single SM on Ampere without spilling
-#       registers; larger values cause occupancy regression.
-block_size = 256
-```
+## Document contracts by audience
 
----
+### Public interfaces
 
-## 2. Breathing Room
+Document obligations and outcomes that a caller cannot infer from the signature:
 
-Code that looks "pasted together" is forbidden. Logical phases must be visually separated
-and labelled. Comments inside function bodies explain the *intent* of each phase, not the
-mechanics of each line.
+- accepted values, units, shapes, and identity or ordering semantics;
+- ownership, lifetime, mutation, aliasing, and thread/async safety;
+- side effects, errors, partial success, cleanup, and required call order;
+- performance assumptions that are part of the supported contract.
 
-**Spacing rules (concrete numbers, no exceptions):**
+For Python, write informative docstrings for public modules, exported functions and classes, and public methods. Omit sections that merely repeat names, type annotations, or the function name. Follow the repository's docstring convention.
 
-- **1 blank line** whenever the semantic responsibility of the code changes —
-  even within a single logical phase. Setup code and computation code are
-  different responsibilities; separate them.
-- **1 blank line** between distinct logical phases inside a function body.
-- **2 blank lines** between methods or top-level functions.
-- **3 blank lines** above a zone anchor (see §4).
-- Long argument lists break across lines with a trailing comma.
-- Every `if`/`else` branch whose body spans more than one statement gets a
-  leading comment naming its intent.
+For C++ and CUDA, use the repository's documentation form for public headers, kernel wrappers, and cross-module seams.
 
-```python
-# WRONG — dense, semantic boundaries invisible
-def acquire(self, timeout: float) -> Connection:
-    with self._lock:
-        deadline = time.monotonic() + timeout
-        while not self._free:
-            remaining = deadline - time.monotonic()
-            if remaining <= 0:
-                raise TimeoutError("no connection available")
-            self._cond.wait(remaining)
-        conn = self._free.pop()
-        self._in_use.add(conn)
-        if not conn.is_alive():
-            conn = self._create()
-            self._in_use.add(conn)
-        return conn
+### Private implementation
 
+Add a private docstring or comment only when a maintainer still needs non-obvious contract, unit, state, invariant, error, ordering, side-effect, or rationale information after reading the code. A private helper whose name, types, and body already tell the whole story needs no template.
 
-# CORRECT — semantic boundaries separated and labelled
-def acquire(self, timeout: float) -> Connection:
-    with self._lock:
-        # Block until a free connection is available or the deadline passes.
-        deadline = time.monotonic() + timeout
-        while not self._free:
-            remaining = deadline - time.monotonic()
-            if remaining <= 0:
-                raise TimeoutError("no connection available")
-            self._cond.wait(remaining)
+## Use semantic markers conditionally
 
-        # Claim the connection before releasing the lock.
-        conn = self._free.pop()
-        self._in_use.add(conn)
+Prefer the repository's recognized tokens. Where none exist, use this small fallback set:
 
-        # NOTE: a connection may have been evicted by the server while idle;
-        #       replace it transparently rather than surfacing a broken handle.
-        if not conn.is_alive():
-            conn = self._create()
-            self._in_use.add(conn)
+- `WARNING:` for correctness or safety constraints whose violation causes serious failure;
+- `PERF:` for measured or contractually important performance assumptions;
+- `NOTE:` for non-obvious rationale, invariants, or API quirks;
+- `TODO:` for a concrete incomplete condition or deferred improvement;
+- `FIXME:` for a known defect with a concrete failure condition.
 
-        return conn
-```
+For `TODO` and `FIXME`, state what remains and when it is considered done; attach the repository's issue identifier when a tracker exists. Do not replace a project's established searchable tokens with this fallback vocabulary.
 
-The semantic-boundary rule applies even to small transitions. In the example above,
-computing `deadline` and waiting on `_cond` are setup; popping from `_free` is a state
-mutation — different responsibilities, so they are separated even though both sit inside
-the same `while` block's surrounding scope.
+## Preserve conditional visual structure
 
----
+Exact blank-line counts belong to the repository formatter and language convention. In Python, follow the project's PEP 8-compatible formatting. Where the project is silent, use two blank lines around top-level functions and classes, and one blank line between method definitions inside a class. Do not hand-format against the formatter.
 
-## 3. Documentation Contracts
+Inside a function, a blank line may mark a real phase transition such as validation → mutation, setup → execution, or execution → cleanup. Keep tightly related statements together; a slight responsibility change does not automatically earn another gap.
 
-### When to write Args / Returns
+A multi-statement branch receives a leading comment only when its condition and body fail to reveal a business intention, invariant, concurrency constraint, or ordering reason. An obvious branch remains uncommented.
 
-Write `Args:` only when a parameter's **semantics cannot be inferred** from its name
-and type annotation alone. Do not write Args for self-evident parameters.
+Use a zone anchor only when all of these are true:
 
-```python
-# WRONG — Args block adds zero information
-def set_learning_rate(self, lr: float) -> None:
-    """
-    Sets the learning rate.
+- the marker is at file top level, not inside a function;
+- the file contains several stable, independently nameable regions;
+- keeping those regions together improves locality more than splitting the file;
+- the anchor does not conceal a multi-responsibility file that should be restructured.
 
-    Args:
-        lr (float): The learning rate.
-    """
-
-# CORRECT — no Args needed; name + type are sufficient
-def set_learning_rate(self, lr: float) -> None:
-    """Updates the optimizer learning rate for the current training phase."""
-    ...
-
-
-# CORRECT — Args needed because semantics are non-obvious
-def allocate(self, req_id: str, tokens: int) -> bool:
-    """
-    Reserves physical KV-cache pages for a new or growing request.
-
-    Args:
-        req_id (str): Stable identifier for the request across scheduler ticks.
-        tokens (int): *Absolute* sequence length, not the delta since last call.
-
-    Returns:
-        bool: False on OOM; caller must not proceed with the request.
-    """
-    # WARNING: OOM pre-screening must precede any state mutation.
-    ...
-```
-
-### `__init__` specifically
-
-Document `__init__` when constructor parameters have non-obvious semantics or units.
-A class docstring describing the object's responsibility is always required.
-
-```python
-class PagedKVCacheManager:
-    """
-    Central manager for the global physical KV-cache block pool.
-    Owns allocation state for all active inference requests.
-    """
-
-    def __init__(self, pool_size: int, block_size: int) -> None:
-        """
-        Args:
-            pool_size  (int): Total physical blocks across the shared pool.
-            block_size (int): Capacity in *tokens* (not bytes) per block.
-        """
-        ...
-```
-
-### File header
-
-Every file opens with a module docstring **before** any imports:
-
-```python
-"""
-scheduler.py
-
-Owns the token-budget allocation and batch-construction logic for the
-inference engine. Interacts with PagedKVCacheManager for memory decisions
-and emits BatchDecision objects consumed by GPUEngine._step().
-"""
-
-import ...
-```
-
----
-
-## 4. Zone Anchors
-
-Use anchors to segment files with multiple logical sections. Use exactly this format —
-no variations in punctuation or width:
+Prefer the repository's section-marker form. Where the repository is silent, this is the fallback:
 
 ```python
 # ===========================
-# <Zone Name>
+# Scheduling Policy
 # ===========================
 ```
 
-Zones are separated by **3 blank lines** above the anchor and **1 blank line** below it.
+The formatter or nearby convention decides surrounding blank lines.
 
-```python
-# ===========================
-# Memory Allocation
-# ===========================
+## CUDA contracts
 
-class PagedKVCacheManager:
-    ...
+When editing a public kernel, public wrapper, or cross-module CUDA seam whose types do not express its memory and execution contract, read [references/CUDA-CONTRACTS.md](references/CUDA-CONTRACTS.md) and apply the relevant fields. Scalar parameters describe units, range, and meaning; they are not memory locations and do not receive a `[Host]` label.
 
+## Completion check
 
-
-# ===========================
-# Scheduling Logic
-# ===========================
-
-class Scheduler:
-    ...
-```
-
----
-
-## 5. CUDA Supplement
-
-All rules above apply. One additional requirement:
-
-**Every pointer parameter in a kernel or host-wrapper must be labelled
-`[Device]` or `[Host]` in its docstring.** This is non-negotiable because
-passing a host pointer to a kernel produces a silent illegal memory access,
-not a compile error.
-
-```cpp
-/*
- * Block-level RMSNorm forward pass.
- * Each CUDA block processes one token vector independently.
- *
- * Args:
- *   out (float*)       : [Device] Output buffer for normalized vectors.
- *   in  (const float*) : [Device] Input hidden-state tensor.
- *   w   (const float*) : [Device] Per-channel scale coefficients.
- *   dim (int)          : [Host]   Feature dimension (elements per token).
- *   eps (float)        : [Host]   Stability epsilon; typically 1e-5.
- *
- * NOTE: Block count must equal batch size; grid is 1-D over the token axis.
- */
-__global__ void rmsnorm(float* out, const float* in, const float* w,
-                        int dim, float eps)
-{
-    // WARNING: barrier mandatory before warp-reduction; omitting it causes
-    //          non-deterministic partial sums across thread groups.
-    __syncthreads();
-    ...
-}
-```
-
----
-
-## Checklist
-
-Run through this before finalising any file:
-
-- [ ] Semantic tokens used for all non-obvious constraints; no `!!!` or `IMPORTANT`.
-- [ ] Semantic boundaries and logical phases inside functions separated by blank lines and labelled.
-- [ ] 2 blank lines between methods; 3 before zone anchors.
-- [ ] Long argument lists broken across lines with trailing comma.
-- [ ] Class docstring present on every class.
-- [ ] `Args:` written only where semantics are genuinely non-obvious.
-- [ ] File-level docstring present before imports.
-- [ ] *(CUDA only)* Every pointer parameter carries `[Device]` or `[Host]`.
+Finish when every added or changed comment contributes information, public contracts expose caller obligations, visual grouping follows local conventions and real phases, and any code-level clarity problem outside this skill's scope is reported to the owning implementation or planning workflow rather than hidden by more commentary.

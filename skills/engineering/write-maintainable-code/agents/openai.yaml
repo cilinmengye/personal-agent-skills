@@ -1,0 +1,6 @@
+interface:
+  display_name: "Write Maintainable Code"
+  short_description: "Choose the smallest maintainable implementation"
+  default_prompt: "Use $write-maintainable-code to implement this change with explicit, evidence-based design choices."
+policy:
+  allow_implicit_invocation: false
