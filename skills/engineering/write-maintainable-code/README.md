@@ -6,13 +6,14 @@
 
 ## 它约束什么
 
-- 简单性按概念、分支、依赖、隐藏状态和公共接口衡量，而不是按行数衡量。
+- 简单性按概念、分支、依赖、隐藏状态和公共接口衡量，与行数无关。
 - 先区分领域不变量、部署配置、产品策略和局部实现细节，再判断 literal 是否属于硬编码。
 - 复用遵循“项目已有能力 → 标准库 → 已有依赖 → 小型本地实现 → 谨慎新增依赖”。
 - 抽象必须隐藏真实变化、集中知识或降低调用者复杂性；单一实现不预建未来框架。
 - 状态转换、副作用、资源生命周期和错误路径应有清楚的 owner。
 - 默认选择清晰可移植的基线；性能契约或测量证据可以证明隔离的专用实现合理。
 - 允许当前功能所必需的局部 prefactor，但不顺手清理无关区域。
+- 资源获取、异步任务、共享状态或并发关闭会触发生命周期检查；普通纯函数不会加载这部分规则。
 
 生成代码、vendor 和明确的 throwaway prototype 不适用这套维护成本假设。
 
@@ -36,13 +37,19 @@ $implement $write-maintainable-code 实现 issue #42；测试 seam 以 ticket �
 $tdd $write-maintainable-code 通过 Scheduler.submit 的 public seam 实现新的取消行为。
 ```
 
+涉及昂贵测试、测试迁移、故障注入或白盒合同时，可以显式组合测试策略；符合其触发条件时，Agent 也可以自动加载它：
+
+```text
+$implement $write-maintainable-code $test-strategy 实现 Executor 关闭流程，并控制真实进程测试成本。
+```
+
 系统代码还需要整理契约注释时，再加入：
 
 ```text
 $implement $write-maintainable-code $code-comments 实现 CUDA buffer pooling ticket。
 ```
 
-这里的职责顺序是：Matt 的 `implement` 会编排施工、`tdd` 与最终 `code-review`；TDD 拥有 red → green 时序，本 Skill 只在 red 已建立后约束 green implementation 的内部选择，`code-comments` 管代码旁契约。
+这里的职责顺序是：Matt 的 `implement` 会编排施工、`tdd` 与最终 `code-review`；TDD 拥有 red → green 时序；`test-strategy` 选择证据层次并控制运行成本；本 Skill 在 red 已建立后约束 green implementation 的内部选择；`code-comments` 管理代码旁契约。
 
 ## 非平凡修改会先给出什么
 
@@ -50,13 +57,15 @@ Agent 在开始首次非平凡 implementation 前会给出一个很短的选择�
 
 ```text
 Owner and invariant:
-Representation and control flow:
-Reuse/dependency choice:
-Portability/performance posture:
+Representation and reuse:
 Necessary local prefactor: none / list:
+Lifecycle risks and ownership: only when applicable
+Portability/performance evidence: only when applicable
 ```
 
-这不是第二份设计文档。它的作用是让“为什么用这种实现”在代码落地前可见，并阻止 Agent 仅因为当前文件已经打开就继续堆叠代码。
+前三项始终记录，后两项只在对应风险存在时出现。这份说明保持简短，让影响实现的选择在编辑前可见，并阻止 Agent 仅因为当前文件已经打开就继续堆叠代码。
+
+生命周期检查覆盖状态转换、资源所有权转移、停止使用的确认方式、部分初始化失败、取消、重复关闭和清理失败。性能证据记录代表性负载、运行设备、相关工具版本、基线、可判定目标、测量方法和最终结果。详细生命周期规则存放在按需读取的参考文件中。
 
 ## 从旧 Skill 迁移
 

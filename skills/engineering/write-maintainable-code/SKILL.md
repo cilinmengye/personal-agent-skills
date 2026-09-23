@@ -19,13 +19,13 @@ Then state this compact implementation choice before the first non-trivial imple
 
 ```text
 Owner and invariant:
-Representation and control flow:
-Reuse/dependency choice:
-Portability/performance posture:
+Representation and reuse:
 Necessary local prefactor: none / list:
+Lifecycle risks and ownership: only when applicable
+Portability/performance evidence: only when applicable
 ```
 
-Here, a **prefactor** is a bounded, behavior-preserving preparatory refactor required to express the current change. A mechanical rename, formatter-only edit, or obvious one-line correction may skip the brief. For other work, finish the brief only when every line names a concrete choice rather than a slogan.
+Here, a **prefactor** is a bounded, behavior-preserving preparatory refactor required to express the current change. A mechanical rename, formatter-only edit, or obvious one-line correction may skip the brief. For other work, complete the three always-applicable lines and include each conditional line only when its trigger exists. Every included line must name a concrete choice rather than a slogan.
 
 When TDD is active, TDD owns sequencing: confirm the seam and establish the failing red test first, then state this brief before the first non-trivial green implementation edit. A prefactor may be part of green only when the current behavior cannot be expressed without it. Defer other refactoring and implementation-quality remediation until the red-green loop is complete.
 
@@ -77,9 +77,13 @@ Prefer explicit inputs, results, state transitions, and locally checkable invari
 
 Keep I/O, mutation, resource acquisition/release, retries, and error translation at an identifiable boundary. Make partial failure and cleanup understandable without tracing unrelated modules. Preserve the repository's error model; add handling for reachable failures, not imagined impossible states.
 
+When the change touches resource acquisition, asynchronous work, shared state, or concurrent shutdown, read [references/RESOURCE-LIFECYCLE.md](references/RESOURCE-LIFECYCLE.md) before implementation. Use it to complete `Lifecycle risks and ownership` with the affected state transitions, ownership transfers, stop confirmation, and failure outcomes, then account for every reachable lifecycle path affected by the change.
+
 ### Default to a portable baseline
 
-Choose the clearest portable implementation unless the specification contains a performance contract or measurements identify a hot path. When specialization is justified, isolate it behind a narrow boundary, retain a clear baseline when the project needs one, and name the evidence and invariants the optimized path depends on. Python/C++/CUDA code may use platform-specific mechanisms when platform specificity is part of the requirement.
+Choose the clearest portable implementation unless the specification contains a performance contract or measurements identify a hot path. When specialization is justified, isolate it behind a narrow boundary and name the evidence and invariants the optimized path depends on. Retain a clear baseline when the project supports platforms outside the specialization, needs an independent correctness reference, or selects implementations at runtime. Python/C++/CUDA code may use platform-specific mechanisms when platform specificity is part of the requirement.
+
+For a measured hot path, complete `Portability/performance evidence` with the representative workload, device or platform, relevant toolchain versions, baseline, measurable accepted target, measurement method, and specialized-path assumptions. Reuse the project's benchmark protocol where one exists. After implementation, record the measured result and compare it with the baseline and target under the same protocol.
 
 ### Allow a necessary local prefactor
 
@@ -93,7 +97,7 @@ This skill does not automatically invoke other skills. When the user also invoke
 
 ## Implementation-quality check
 
-Before finishing, inspect only the code written or materially changed by this implementation:
+Run one bounded pass over only the code written or materially changed by this implementation:
 
 - Is every literal owned as an invariant, deployment value, product policy, or local implementation detail?
 - Did each new abstraction, dependency, and configuration option pass its gate?
@@ -102,4 +106,4 @@ Before finishing, inspect only the code written or materially changed by this im
 - Was every prefactor necessary, behavior-preserving, and bounded?
 - Could the same behavior be expressed with fewer concepts or a smaller public surface without hiding important constraints?
 
-Fix implementation-local issues found by this pass within the active workflow's remediation stage. When TDD is active, do not interrupt red → minimal green with nonessential refactoring. Do not repeat specification validation, choose new test seams, expand into repository-wide refactoring, or substitute this check for TDD or code review.
+Fix evidence-backed implementation-local issues within the active workflow's remediation stage. When a fix materially changes the implementation choice, recheck only the affected gate. Finish when the accepted contract is satisfied, the necessary local issues are resolved, and the active workflow's relevant verification has passed. When TDD is active, preserve red → minimal green before implementation-quality remediation. Specification validation, test-level selection, repository-wide structure work, and independent review remain with their owning workflows.

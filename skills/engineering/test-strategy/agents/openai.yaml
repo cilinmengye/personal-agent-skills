@@ -1,0 +1,6 @@
+interface:
+  display_name: "Test Strategy"
+  short_description: "Choose sufficient test evidence at controlled cost"
+  default_prompt: "Use $test-strategy to choose test evidence, execution levels, and migration rules for this change."
+policy:
+  allow_implicit_invocation: true
