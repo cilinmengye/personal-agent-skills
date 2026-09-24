@@ -1,6 +1,6 @@
 ---
 name: test-strategy
-description: Choose contract-based test levels and cost-aware execution for expensive systems, refactor-driven test migration, fault injection or test doubles, and white-box lifecycle, concurrency, or performance contracts.
+description: Choose contract-based test levels and control test-suite growth during refactoring, expensive test execution, fault injection or test doubles, and white-box lifecycle, concurrency, or performance contracts.
 license: MIT
 ---
 
@@ -27,6 +27,12 @@ Final validation set:
 Keep each field to one line unless a safety or performance contract needs a short list. An independent expected result may come from a specification example, known literal, reference implementation, invariant, or metamorphic relation; it must be able to disagree with the production logic. Reuse an unchanged contract across related cases. For a mechanical rename, type-only change, or wiring edit with no new independently observable behavior, state that no new test is needed and list the existing checks that cover the risk.
 
 This step is complete when the protected behavior, independent oracle, lowest sufficient level, invalidators, and final validation set are explicit.
+
+## Admit tests by added evidence
+
+Before adding tests for a behavior, compare the proposed group with existing evidence. Name its independent expected result and the evidence it adds. Add tests that expose an uncovered failure mode, exercise a real boundary absent from existing evidence, or materially shorten feedback and localize failures. Reuse or consolidate tests that provide equivalent evidence at reasonable cost. Focused tests and broader integration tests can coexist when each contributes distinct feedback or mechanism coverage.
+
+This decision is complete when the added evidence or the reason to reuse existing coverage is explicit.
 
 ## Select the lowest sufficient level
 
@@ -67,12 +73,14 @@ Treat source builds, loaded process code, dependencies, configuration, and persi
 
 When a failure repeats without new evidence, stop rerunning it and diagnose the cause. Assertion weakening, arbitrary waits, and retries do not create evidence.
 
+Before an expensive run or large test migration expands beyond the agreed plan, state the added evidence, estimated work and run cost, and remaining risk; ask the user to decide the expanded scope. Complete the accepted final validation set.
+
 For model, GPU, browser, service, multiprocess, startup, shutdown, or destructive failure tests, read [references/EXPENSIVE-RUNS.md](references/EXPENSIVE-RUNS.md) before running them.
 
 For tests affected by a module extraction, ownership move, interface change, or directory restructuring, read [references/TEST-MIGRATION.md](references/TEST-MIGRATION.md) before editing the tests.
 
 ## Finish with an evidence ledger
 
-Finish when every affected behavior has a named evidence source, every migrated test has a disposition, invalidated results have been rerun, and the final validation set has completed. Record expensive commands, environment restarts, final results, and uncovered contracts. Describe each passing test only within the evidence scope established above.
+Finish when every accepted affected behavior and distinct failure mode has sufficient evidence, every affected legacy test belongs to a group with an explicit disposition, invalidated results have been rerun, and the predeclared final validation set has completed. End test expansion at this gate; reassess it for a demonstrated defect, an uncovered accepted contract, or a new mechanism risk. Record optional hardening separately, along with expensive commands, environment restarts, final results, and uncovered contracts. Describe each passing test only within the evidence scope established above.
 
 If an active implementation or review workflow accepts a code change after testing, rerun the levels invalidated by that change. Review invocation and finding remediation remain with that workflow.

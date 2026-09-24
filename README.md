@@ -8,10 +8,10 @@
 | --- | --- | --- |
 | [`evolve-codebase-structure`](skills/engineering/evolve-codebase-structure/) | 周期性检查代码放置、文件拆分、目录演化和包边界 | 个人维护 |
 | [`write-maintainable-code`](skills/engineering/write-maintainable-code/) | 在行为与接口确定后，选择最小可维护实现 | 个人维护；替代旧 `andrej-karpathy-skills` |
-| [`test-strategy`](skills/engineering/test-strategy/) | 选择测试证据层次，控制昂贵运行和测试迁移成本 | 个人维护；条件自动调用 |
+| [`test-strategy`](skills/engineering/test-strategy/) | 选择测试证据层次，控制昂贵运行、测试扩充和迁移成本 | 个人维护；条件自动调用 |
 | [`code-comments`](skills/engineering/code-comments/) | 改善 Python/C++/CUDA 系统代码的契约注释与条件性视觉结构 | 个人维护 |
 
-`write-maintainable-code` 与 `code-comments` 由使用者显式调用。`test-strategy` 只在昂贵测试、测试迁移、故障注入、测试层次选择和白盒合同判断中自动加载。
+`write-maintainable-code` 与 `code-comments` 由使用者显式调用。`test-strategy` 只在昂贵测试、重构期间测试扩充、测试迁移、故障注入、测试层次选择和白盒合同判断中自动加载。
 
 ## 安装
 
